@@ -1,9 +1,9 @@
 <script setup lang="ts">
-    import { Button } from '@/components/ui/button'
+    import NavigationBar from './components/NavigationBar.vue';
 </script>
 
 <template>
     <div>
-        <Button>Click me</Button>
+        <NavigationBar />
     </div>
 </template>
