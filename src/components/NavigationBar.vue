@@ -13,6 +13,7 @@
     import { Sun, Moon } from 'lucide-vue-next'
 
     const emit = defineEmits<{
+        (e: 'video', url: string): void
         (e: 'subtitle', content: string): void
     }>()
 
@@ -34,6 +35,21 @@
         } 
     }
 
+    // ======= VIDEO =======
+    const video = useTemplateRef("video-input")
+    function openVideoFile() {
+        video.value?.click()
+    }
+
+    function onVideoFile(event: Event) {
+        const input = event.target as HTMLInputElement | null;
+        if (!input || !input.files || input.files.length === 0) return;
+
+        const file = input.files[0];
+        const url = URL.createObjectURL(file)
+        emit("video", url)
+    }
+
     // ====== SUBTITLE ======
     const subtitle = useTemplateRef("subtitle-input")
     
@@ -51,8 +67,6 @@
         })
     }
 
-
-
     onMounted(() => {
         theme.value = localStorage.getItem("theme") ?? "light"
     })
@@ -65,7 +79,10 @@
                 <MenubarMenu>
                     <MenubarTrigger>File</MenubarTrigger>
                     <MenubarContent>
-                        <MenubarItem>Open Video</MenubarItem>
+                        <MenubarItem @select="openVideoFile">
+                            <input type="file" hidden="true" ref="video-input" @change="onVideoFile"> 
+                            Open Video
+                        </MenubarItem>
                         <MenubarItem>Open Audio</MenubarItem>
                         <MenubarItem @select="openSubtitle">
                             <input type="file" hidden="true" ref="subtitle-input" @change="onSubtitleFile"> 

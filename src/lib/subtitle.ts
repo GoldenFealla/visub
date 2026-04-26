@@ -7,7 +7,11 @@ export type Styles = {
   items: Style[];
 };
 
-export type Dialogue = Record<string, string>;
+export type Dialogue = Record<string, string | number>;
+export type DialogueWithTime = Dialogue & {
+  startSec: number;
+  endSec: number;
+};
 
 export type Events = {
   format: string[];
