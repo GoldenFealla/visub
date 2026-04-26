@@ -1,5 +1,5 @@
 <script setup lang="ts">
-    import { onMounted, ref, watch } from 'vue';
+    import { onMounted, ref, useTemplateRef, watch } from 'vue';
     import {
         Menubar,
         MenubarContent,
@@ -12,10 +12,12 @@
     import { Button } from '@/components/ui/button'
     import { Sun, Moon } from 'lucide-vue-next'
 
-    const theme = ref("light")
+    const emit = defineEmits<{
+        (e: 'subtitle', content: string): void
+    }>()
 
+    const theme = ref("light")
     watch(theme, (t) => {
-        console.log("trigger");
         localStorage.setItem("theme", t)
         if (t === "light") {
             document.body.classList.remove("dark")
@@ -32,10 +34,28 @@
         } 
     }
 
+    // ====== SUBTITLE ======
+    const subtitle = useTemplateRef("subtitle-input")
+    
+    function openSubtitle() {
+        subtitle.value?.click()
+    }
+
+    function onSubtitleFile(event: Event) {
+        const input = event.target as HTMLInputElement | null;
+        if (!input || !input.files || input.files.length === 0) return;
+
+        const file = input.files[0];
+        file.text().then((t) => {
+            emit("subtitle", t)
+        })
+    }
+
+
+
     onMounted(() => {
         theme.value = localStorage.getItem("theme") ?? "light"
     })
-    
 </script>
 
 <template>
@@ -47,7 +67,10 @@
                     <MenubarContent>
                         <MenubarItem>Open Video</MenubarItem>
                         <MenubarItem>Open Audio</MenubarItem>
-                        <MenubarItem>Open Subtitble</MenubarItem>
+                        <MenubarItem @select="openSubtitle">
+                            <input type="file" hidden="true" ref="subtitle-input" @change="onSubtitleFile"> 
+                            Open Subtitble
+                        </MenubarItem>
                         <MenubarSeparator />
                         <MenubarItem>Save</MenubarItem>
                     </MenubarContent>
