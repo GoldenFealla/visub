@@ -1,132 +1,39 @@
-export type ScriptInfo = Record<string, string>;
+import { ref, computed, type Ref, watchEffect } from "vue";
 
-export type Style = Record<string, string>;
+import { parse, stringify, type ParsedASS } from "ass-compiler";
+import ASS from "assjs";
 
-export type Styles = {
-  format: string[];
-  items: Style[];
-};
+export class Subtitle {
+  private _ps: Ref<ParsedASS | null> = ref(null);
+  private _vel: Ref<HTMLVideoElement | null> = ref(null);
+  private _cel: Ref<HTMLDivElement | null> = ref(null);
 
-export type Dialogue = Record<string, string | number>;
-export type DialogueWithTime = Dialogue & {
-  startSec: number;
-  endSec: number;
-};
+  constructor() {
+    watchEffect(() => {
+      console.log("new");
 
-export type Events = {
-  format: string[];
-  dialogues: Dialogue[];
-};
+      if (!this._ps.value) return;
+      const content = stringify(this._ps.value);
 
-export type Subtitle = {
-  scriptInfo: ScriptInfo;
-  styles: Styles;
-  events: Events;
-};
-
-export function ReadASS(content: string): Subtitle {
-  const lines = content.split(/\r?\n/);
-
-  let section: "script" | "styles" | "events" | null = null;
-
-  const subtitle: Subtitle = {
-    scriptInfo: {},
-    styles: {
-      format: [],
-      items: [],
-    },
-    events: {
-      format: [],
-      dialogues: [],
-    },
-  };
-
-  const splitOnce = (line: string) => {
-    const i = line.indexOf(":");
-    if (i === -1) return [line, ""];
-    return [line.slice(0, i).trim(), line.slice(i + 1).trim()];
-  };
-
-  const splitByCommaWithLimit = (line: string, limit: number) => {
-    const result: string[] = [];
-    let current = "";
-    let count = 0;
-
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-
-      if (char === "," && count < limit - 1) {
-        result.push(current.trim());
-        current = "";
-        count++;
-      } else {
-        current += char;
+      if (this._vel.value && this._cel.value) {
+        return new ASS(content, this._vel.value, { container: this._cel.value });
       }
-    }
-
-    result.push(current.trim());
-    return result;
-  };
-
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
-    if (!line || line.startsWith(";")) continue;
-
-    // Section switch
-    if (line.startsWith("[") && line.endsWith("]")) {
-      const name = line.slice(1, -1);
-
-      section = null;
-      if (name === "Script Info") section = "script";
-      else if (name === "V4+ Styles" || name === "V4 Styles") section = "styles";
-      else if (name === "Events") section = "events";
-
-      continue;
-    }
-
-    const [key, value] = splitOnce(line);
-
-    // --- Script Info ---
-    if (section === "script") {
-      subtitle.scriptInfo[key] = value;
-    }
-
-    // --- Styles ---
-    if (section === "styles") {
-      if (key === "Format") {
-        subtitle.styles.format = value.split(",").map((s) => s.trim());
-      }
-
-      if (key === "Style") {
-        const values = splitByCommaWithLimit(value, subtitle.styles.format.length);
-        const obj: Style = {};
-
-        subtitle.styles.format.forEach((k, i) => {
-          obj[k] = values[i] ?? "";
-        });
-
-        subtitle.styles.items.push(obj);
-      }
-    }
-
-    // --- Events ---
-    if (section === "events") {
-      if (key === "Format") {
-        subtitle.events.format = value.split(",").map((s) => s.trim());
-      }
-
-      if (key === "Dialogue") {
-        const values = splitByCommaWithLimit(value, subtitle.events.format.length);
-        const obj: Dialogue = {};
-
-        subtitle.events.format.forEach((k, i) => {
-          obj[k] = values[i] ?? "";
-        });
-
-        subtitle.events.dialogues.push(obj);
-      }
-    }
+    });
   }
 
-  return subtitle;
+  public dialogue = computed(() => {
+    return this._ps.value?.events.dialogue ?? [];
+  });
+
+  public SetSubtitle = (content: string) => {
+    this._ps.value = parse(content);
+  };
+
+  public SetVideoElement = (video: HTMLVideoElement) => {
+    this._vel.value = video;
+  };
+
+  public SetContainerElement = (container: HTMLDivElement) => {
+    this._cel.value = container;
+  };
 }

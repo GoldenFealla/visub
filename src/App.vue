@@ -1,47 +1,33 @@
 <script setup lang="ts">
     import { computed, onMounted, ref } from 'vue';
-    
+
+    import { Subtitle } from './lib/subtitle'; 
+
     import NavigationBar from './components/NavigationBar.vue';
     import SubtitlePanel from './components/SubtitlePanel.vue';
 
-    import { ReadASS, type Subtitle, type DialogueWithTime } from '@/lib/subtitle';
-
-    const video = ref("")
+    const subtitle = ref<Subtitle>(new Subtitle())
+    const videoRef = ref<HTMLVideoElement | null>(null)
     function onLoadVideo(url: string) {
-        video.value = url
+        if (videoRef.value) {
+            videoRef.value.src = url
+        }
     }
 
-    const subtitle = ref<Subtitle | null>(null)
     function onLoadSubtitle(content: string) {
-        subtitle.value = ReadASS(content)
+        subtitle.value.SetSubtitle(content)
     }
 
-
-
-    function toSeconds(timeStr: any) {
-      const [h, m, s] = timeStr.split(':')
-      return (+h * 3600) + (+m * 60) + parseFloat(s)
-    }
-
-    const dialoguesWithTime = computed<DialogueWithTime[] | undefined>(() =>
-        subtitle.value?.events.dialogues.map(d => ({
-            ...d,
-            startSec: toSeconds(d.Start),
-            endSec: toSeconds(d.End)
-        }))
-    )
-
-
-    const videoRef = ref<HTMLMediaElement | null>(null)
+    const subtitleRef = ref<HTMLDivElement | null>(null)
     const activeSet = ref(new Set<number>())
     function loop() {
-        if (videoRef.value && dialoguesWithTime.value) {
+        if (videoRef.value && subtitle.value.dialogue) {
             const t = videoRef.value.currentTime
             const next = new Set<number>()
 
-            for (let i = 0; i < dialoguesWithTime.value.length; i++) {
-                const d = dialoguesWithTime.value[i]
-                if (t >= d.startSec && t <= d.endSec) {
+            for (let i = 0; i < subtitle.value.dialogue.length; i++) {
+                const d = subtitle.value.dialogue[i]
+                if (t >= d.Start && t <= d.End) {
                     next.add(i)
                 }
             }
@@ -60,6 +46,8 @@
     }
 
     onMounted(() => {
+        subtitle.value.SetVideoElement(videoRef.value!)
+        subtitle.value.SetContainerElement(subtitleRef.value!)
         requestAnimationFrame(loop)
     })
 </script>
@@ -68,10 +56,13 @@
     <div>
         <NavigationBar @subtitle="onLoadSubtitle" @video="onLoadVideo" />
     </div>
-    <div class="p-2">
-        <video ref="videoRef" class="max-h-96" :src="video" controls ></video>
+        <div class="relative h-96 p-2">
+        <video ref="videoRef" class="absolute top-0 left-0" controls></video>
+        <div ref="subtitleRef" class="absolute top-0 left-0"></div>
     </div>
-    <div>
-        <SubtitlePanel :actives="activeSet" :format="subtitle?.events.format" :dialogues="dialoguesWithTime" />
+     <div style="position: relative;">
+        <SubtitlePanel :actives="activeSet" :dialogues="subtitle.dialogue" />
     </div>
+
+   
 </template>

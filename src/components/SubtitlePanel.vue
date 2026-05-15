@@ -1,5 +1,5 @@
 <script setup lang="ts">
-    import { type  DialogueWithTime } from '@/lib/subtitle';
+    import type { ParsedASSEvent } from 'ass-compiler';
     import {
         Table,
         TableBody,
@@ -10,10 +10,18 @@
     } from '@/components/ui/table'
 
     const props = defineProps<{
-        actives: Set<number>,
-        format: string[] | undefined,
-        dialogues: DialogueWithTime[] | undefined
+        actives: Set<number>
+        dialogues: ParsedASSEvent[] | undefined
     }>()
+
+    function format(seconds: number) {
+        const hrs = Math.floor(seconds / 3600);
+        const mins = Math.floor((seconds % 3600) / 60);
+        const secs = Math.floor(seconds % 60);
+        const centis = Math.floor((seconds % 1) * 100);
+
+        return `${hrs}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${String(centis).padStart(2, '0')}`;
+    }
 </script>
 
 <template>
@@ -35,10 +43,10 @@
                     :class="{ 'text-red-400': actives.has(index) }"
                 >
                     <TableCell class="py-0.5 min-w-10">{{ index + 1 }}</TableCell>
-                    <TableCell class="py-0.5 min-w-25">{{ dialogue.Start }}</TableCell>
-                    <TableCell class="py-0.5 min-w-25">{{ dialogue.End }}</TableCell>
+                    <TableCell class="py-0.5 min-w-25">{{ format(dialogue.Start) }}</TableCell>
+                    <TableCell class="py-0.5 min-w-25">{{ format(dialogue.End) }}</TableCell>
                     <TableCell class="py-0.5 min-w-30">{{ dialogue.Style }}</TableCell>
-                    <TableCell class="py-0.5 w-full">{{ dialogue.Text }}</TableCell>
+                    <TableCell class="py-0.5 w-full">{{ dialogue.Text.combined }}</TableCell>
                 </TableRow>
             </TableBody>
         </Table>
